@@ -112,6 +112,7 @@ class Sigil():
 
 			# Automatically sells farming items
 			async with FlashTrash(self.client) as flash_trash:
+				logger.debug(f'Client {self.client.title} - Quick Selling Items')
 				await flash_trash.open_and_select_backpack_all_tab()
 
 			# Automatically use and buy potions if needed
