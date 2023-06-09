@@ -43,7 +43,7 @@ class SlackPackError(Exception):
 
 # @logger.catch
 class SlackPack:
-    def __init__(self, client):
+    def __init__(self, client) -> None:
         self.client = client
         self.root_window = client.root_window
         self.mouse_handler = client.mouse_handler
@@ -78,19 +78,6 @@ class SlackPack:
 
         self.current_equipped_item = 0
         self.current_new_item = 0
-
-    async def wait_for_window_to_exist(self, parent_window, name, delay=0):
-        # Waits for window to exist before acting
-        if type(name) is str:
-            while len(w := await parent_window.get_windows_with_name(name)) == 0:
-                (delay > 0) and await asyncio.sleep(delay)
-
-            return w[0]
-        elif type(name) is list:
-            while not (w := await get_window_from_path(parent_window, name)):
-                (delay > 0) and await asyncio.sleep(delay)
-
-            return w
 
     async def open_and_parse_backpack_contents(self, client):
         # Opens backpack, parses through backpack tabs, does not parse items, different function

@@ -5,6 +5,7 @@ from src.teleport_math import navmap_tp, calc_FrontalVector, are_xyzs_within_thr
 from src.utils import is_visible_by_path, click_window_by_path, wait_for_zone_change, auto_potions, logout_and_in, is_free, get_quest_name, collect_wisps
 from src.paths import team_up_button_path, team_up_confirm_path, dungeon_warning_path, cancel_chest_roll_path, npc_range_path
 from src.sprinty_client import SprintyClient
+from src.flash_trash import FlashTrash
 from typing import List
 
 
@@ -104,9 +105,14 @@ class Sigil():
 
 	@logger.catch()
 	async def solo_farming_logic(self):
+
 		while self.client.sigil_status:
 			while not await is_visible_by_path(self.client, team_up_button_path) and self.client.sigil_status:
 				await asyncio.sleep(0.1)
+
+			# Automatically sells farming items
+			async with FlashTrash(self.client) as flash_trash:
+				await flash_trash.open_and_select_backpack_all_tab()
 
 			# Automatically use and buy potions if needed
 			await auto_potions(self.client)
