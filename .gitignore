@@ -5,3 +5,7 @@ flash_trash_run.py
 .idea/.name
 src/.idea/vcs.xml
 src/parse_items_in_inventory.py
+.idea/Deimos-Wizard101-development.iml
+.idea/discord.xml
+.idea/misc.xml
+parse_items_in_inventory.py

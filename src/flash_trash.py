@@ -3,6 +3,7 @@ import re
 from wizwalker.extensions.scripting.utils import _maybe_get_named_window
 from src.utils import *
 from src.items_to_quick_sell import *
+from loguru import logger
 
 
 # TODO - We need to check if the trying to get a window fails, if it fails we break from the sell action
@@ -32,6 +33,7 @@ class FlashTrash:
             self.window = None
         return self.window
 
+    @logger.catch()
     async def open_and_select_backpack_all_tab(self) -> None:
         # General Logic for detecting if spell book is open, if it's open we need to make sure its on the right tab
         # To Keep it simple, we are starting on Backpack tab, moving to Housing, and Finally Jewels (for now at least)
@@ -44,7 +46,7 @@ class FlashTrash:
             spellbook = await _maybe_get_named_window(self.client.root_window, "btnSpellbook")
             async with self.client.mouse_handler:
                 await self.client.mouse_handler.click_window(spellbook)
-            await asyncio.sleep(.5)
+            await asyncio.sleep(.2)
 
         inventory_page = await self._check_if_window_is_visible('InventorySpellbookPage')
 
@@ -54,20 +56,24 @@ class FlashTrash:
             select_inventory_tab = await _maybe_get_named_window(self.client.root_window, "Inventory")
             async with self.client.mouse_handler:
                 await self.client.mouse_handler.click_window(select_inventory_tab)
-            await asyncio.sleep(1)
+            await asyncio.sleep(.5)
 
-        quick_sell_tab = await _maybe_get_named_window(self.client.root_window, "QuickSell_Item")
+        try:
+            quick_sell_tab = await _maybe_get_named_window(self.client.root_window, "QuickSell_Item")
+        except ValueError:
+            await asyncio.sleep(2)
+            quick_sell_tab = await _maybe_get_named_window(self.client.root_window, "QuickSell_Item")
 
         # I don't think we can detect if the user is on the All Equipments Tab, so we just click it no matter what
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window(quick_sell_tab)
-        await asyncio.sleep(.5)
+        await asyncio.sleep(1)
 
         select_all_tab = await _maybe_get_named_window(self.client.root_window, 'ShopCategory_All')
 
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window(select_all_tab)
-        await asyncio.sleep(.5)
+        await asyncio.sleep(.2)
 
         # Check what page the user is on. If they aren't on the first page, set them to the first page
         left_button = await _maybe_get_named_window(self.client.root_window, 'leftscroll')
@@ -76,16 +82,16 @@ class FlashTrash:
         if await left_button.is_visible():
             while not await is_control_grayed(left_button):
                 async with self.client.mouse_handler:
-                    await asyncio.sleep(.5)
+                    await asyncio.sleep(.2)
                     await self.client.mouse_handler.click_window(left_button)
         while not await is_control_grayed(right_button):
             async with self.client.mouse_handler:
-                await asyncio.sleep(.5)
+                await asyncio.sleep(.2)
                 await self.read_each_item()
                 await self.client.mouse_handler.click_window(right_button)
         # Below reads final page contents
         await self.read_each_item()
-        await asyncio.sleep(.5)
+        await asyncio.sleep(.2)
 
         quick_sell_items = await _maybe_get_named_window(self.client.root_window, 'sellAction')
         if not await is_control_grayed(quick_sell_items):
@@ -95,21 +101,26 @@ class FlashTrash:
             confirm_quick_sell_items = await _maybe_get_named_window(self.client.root_window, 'SellButton')
             async with self.client.mouse_handler:
                 await self.client.mouse_handler.click_window(confirm_quick_sell_items)
-            await asyncio.sleep(5)
+
+            please_wait = await get_window_from_path(self.client.root_window, ['WorldView', 'shopGUI', 'QuickSellWaitingWindow'])
+            while await please_wait.is_visible():
+                try:
+                    please_wait = await _maybe_get_named_window(self.client.root_window, 'QuickSellWaitingWindow')
+                except ValueError:
+                    break
         else:
             close_shop = await _maybe_get_named_window(self.client.root_window, 'exit')
             async with self.client.mouse_handler:
                 await self.client.mouse_handler.click_window(close_shop)
-            await asyncio.sleep(.5)
+            await asyncio.sleep(.2)
+
+        await asyncio.sleep(1)
         close_back_pack = await _maybe_get_named_window(self.client.root_window, 'Close_Button')
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window(close_back_pack)
-        await asyncio.sleep(.5)
-
-
+        await asyncio.sleep(.2)
 
     async def read_each_item(self):
-        pass
         for i in range(0, 10):
             # We set the path for 'i' which is the item we want to check if we can sell it
             item = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column0", f"shoplist{i}"])
@@ -123,6 +134,7 @@ class FlashTrash:
                 check_box_rectangle = await item_to_sell_check_box.scale_to_client()
                 async with self.client.mouse_handler:
                     await self.client.mouse_handler.click(*(check_box_rectangle.center()))
+                    logger.debug(f'Client {self.client.title} - Quick Selling {item_name}')
 
 
 

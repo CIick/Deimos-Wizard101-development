@@ -49,6 +49,9 @@ class Sigil():
 
 	@logger.catch()
 	async def join_sigil(self, client: Client = None):
+		# Retrying pressing X to make sure we are in sigil, I noticed it gets stuck here sometimes
+		await client.send_key(Keycode.X, seconds=0.1)
+
 		if not client:
 			client = self.client
 		if client.use_team_up:
@@ -59,6 +62,8 @@ class Sigil():
 			await asyncio.sleep(0.5)
 			if await is_visible_by_path(client, dungeon_warning_path):
 				await client.send_key(Keycode.ENTER, 0.1)
+			# Retrying pressing X to make sure we are in sigil, I noticed it gets stuck here sometimes
+			await client.send_key(Keycode.X, seconds=0.1)
 			await wait_for_zone_change(client, current_zone=current_zone)
 
 
@@ -111,9 +116,13 @@ class Sigil():
 				await asyncio.sleep(0.1)
 
 			# Automatically sells farming items
-			async with FlashTrash(self.client) as flash_trash:
+			if self.client.auto_sell:
 				logger.debug(f'Client {self.client.title} - Quick Selling Items')
-				await flash_trash.open_and_select_backpack_all_tab()
+				async with FlashTrash(self.client) as flash_trash:
+					await flash_trash.open_and_select_backpack_all_tab()
+				await asyncio.sleep(1)
+			else:
+				logger.debug(f'Client {self.client.title} - Quick Selling Disabled')
 
 			# Automatically use and buy potions if needed
 			await auto_potions(self.client)
@@ -126,7 +135,7 @@ class Sigil():
 			if await get_quest_name(self.client) == self.original_quest:
 				start_xyz = await self.client.body.position() 
 				second_xyz = await calc_FrontalVector(self.client, speed_constant=200, speed_adjusted=False)
-				await asyncio.sleep(3.5)
+				await asyncio.sleep(0.5)
 				await SprintyClient(self.client).tp_to_closest_mob()
 				await self.wait_for_combat_finish()
 				await asyncio.sleep(0.1)
@@ -154,8 +163,16 @@ class Sigil():
 						break
 
 				logger.debug(f'Client {self.client.title} - Awaiting loading')
+				x = 0
 				while await self.client.is_loading():
-					await asyncio.sleep(0.1)
+					if x == 100:
+						logger.debug(f'Client {self.client.title} - Is Stuck in Whileloop, add logic to fix it')
+					# Added X keycode send because I noticed that the sigil farm gets stuck RIGHT at the sigil
+					# I'm not sure why it get's stuck the sigil Teamup is visible
+					await self.client.send_key(Keycode.X)
+					await asyncio.sleep(1)
+					x = x + 1
+				logger.debug(f'Client {self.client.title} - Exited While Loop for loading')
 
 			else:
 				# TODO: Logic for dungeons with questlines
