@@ -33,6 +33,27 @@ class FlashTrash:
             self.window = None
         return self.window
 
+    async def check_if_client_is_close_to_max_gold(self) -> bool:
+        select_character_stats_for_max_gold_calculation = await _maybe_get_named_window(self.client.root_window, 'CharStats')
+        async with self.client.mouse_handler:
+            await self.client.mouse_handler.click_window(select_character_stats_for_max_gold_calculation)
+
+        window_of_client_current_gold = await _maybe_get_named_window(self.client.root_window, 'Gold')
+        messy_client_current_gold = await window_of_client_current_gold.read_wide_string_from_offset(584)
+        string_client_current_gold = re.sub('\D', '', messy_client_current_gold)
+        client_current_gold = int(string_client_current_gold)
+
+
+        window_of_client_max_gold = await _maybe_get_named_window(self.client.root_window, 'GoldMax')
+        messy_client_max_gold = await window_of_client_max_gold.read_wide_string_from_offset(584)
+        string_client_max_gold = re.sub('\D', '', messy_client_max_gold)
+        client_max_gold = int(string_client_max_gold)
+        client_max_gold_safe_zone = client_max_gold - 20000
+
+        if client_max_gold_safe_zone < client_current_gold:
+            logger.debug(f'Client {self.client.title} - is too close to max gold to sell items \nCurrent Gold: {client_current_gold} \nMax Gold: {client_max_gold_safe_zone + 20000} ')
+            return True
+
     @logger.catch()
     async def open_and_select_backpack_all_tab(self) -> None:
         # General Logic for detecting if spell book is open, if it's open we need to make sure its on the right tab
@@ -47,6 +68,13 @@ class FlashTrash:
             async with self.client.mouse_handler:
                 await self.client.mouse_handler.click_window(spellbook)
             await asyncio.sleep(.2)
+
+        if await self.check_if_client_is_close_to_max_gold():
+            # We are checking if gold is close to max. If it is, we close the spell book to allow sigil to continue
+            spellbook = await _maybe_get_named_window(self.client.root_window, "btnSpellbook")
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window(spellbook)
+            return
 
         inventory_page = await self._check_if_window_is_visible('InventorySpellbookPage')
 
@@ -135,6 +163,7 @@ class FlashTrash:
                 async with self.client.mouse_handler:
                     await self.client.mouse_handler.click(*(check_box_rectangle.center()))
                     logger.debug(f'Client {self.client.title} - Quick Selling {item_name}')
+
 
 
 

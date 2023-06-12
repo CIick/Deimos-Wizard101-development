@@ -49,9 +49,6 @@ class Sigil():
 
 	@logger.catch()
 	async def join_sigil(self, client: Client = None):
-		# Retrying pressing X to make sure we are in sigil, I noticed it gets stuck here sometimes
-		await client.send_key(Keycode.X, seconds=0.1)
-
 		if not client:
 			client = self.client
 		if client.use_team_up:
