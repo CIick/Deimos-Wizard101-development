@@ -12,6 +12,23 @@ class FlashTrash:
         self.client = client
         self.spell_book_is_open = None
         self.inventory_page = None
+        self.equippble_tab = ['ShopCategory_Hat',
+                     'ShopCategory_Robe',
+                     'ShopCategory_Shoes',
+                     'ShopCategory_Weapon',
+                     'ShopCategory_Athame',
+                     'ShopCategory_Amulet',
+                     'ShopCategory_Ring',
+                     'ShopCategory_Deck']
+        self.housing_tab = ['ShopCategory_CastleBlock',
+                            'ShopCategory_PlantLife',
+                            'ShopCategory_WallHangings',
+                            'ShopCategory_WallpaperCarpet',
+                            'ShopCategory_Outdoor',
+                            'ShopCategory_Furniture',
+                            'ShopCategory_Decoration',
+                            'ShopCategory_MusicScroll',
+                            'ShopCategory_Seed']
 
     async def open(self):
         pass
@@ -53,6 +70,11 @@ class FlashTrash:
         if client_max_gold_safe_zone < client_current_gold:
             logger.debug(f'Client {self.client.title} - is too close to max gold to sell items \nCurrent Gold: {client_current_gold} \nMax Gold: {client_max_gold_safe_zone + 20000} ')
             return True
+
+    async def check_if_client_is_close_to_max_backpack_space(self) -> bool:
+        open_back_pack = await _maybe_get_named_window(self.client.root_window, 'CharStats')
+        async with self.client.mouse_handler:
+            await self.client.mouse_handler.click_window(select_character_stats_for_max_gold_calculation)
 
     async def open_quick_sell_menu(self) -> None:
         # General Logic for detecting if spell book is open, if it's open we need to make sure its on the right tab
@@ -171,10 +193,84 @@ class FlashTrash:
         # Logic for finalizing sale + returning character to neutral state so other tools don't break
         await self.logic_for_finalizing_sale()
 
-    async def goto_bazzar(self) -> None:
-        go_to_clients_home = await _maybe_get_named_window(self.client.root_window, 'GoHomeButton')
+    async def goto_bazzar_and_open_sell_tab(self) -> None:
+        # await navigate_to_ravenwood(self.client)
+        # await navigate_to_commons_from_ravenwood(self.client)
+        # await navigate_to_shopping_district(self.client)
+        # await navigate_to_olde_town(self.client)
+        await navigate_to_bazzar(self.client)
+
+    async def navigate_to_sell_tab(self) -> None:
         async with self.client.mouse_handler:
-            await self.client.mouse_handler.click_window(go_to_clients_home)
+            await self.client.mouse_handler.click_window_with_name('sellTab')
+
+    async def read_each_shop_item(self, tab):
+        tab_window = await _maybe_get_named_window(self.client.root_window, tab)
+        if await tab_window.read_value_from_offset(688, 'bool') is True:
+            return
+        async with self.client.mouse_handler:
+            await self.client.mouse_handler.click_window_with_name(tab)
+        for i in range(0, 7):
+            # We set the path for 'i' which is the item we want to check if we can sell it
+            item_path = ["WorldView", "shopGUI", "sellWindow", f"shoplist{i}"]
+            item = await get_window_from_path(self.client.root_window, item_path)
+            messy_item_name = await item.read_wide_string_from_offset(616)
+            lower_item_name_illegal_characters = messy_item_name.lower()
+            item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
+            # Below logic is cancer, but I don't see a problem with it. It checks if items can be sold,
+            # If item is sold it re-gets the index of the item sold because selling the item removes it from your
+            # sellable inventory and puts a new item in that slot, we check if THAT item is
+            if item_name in items_to_sell:
+                # If item is in list of items to sell, enter this code
+                await click_window_by_path(self.client, path=item_path)
+                sell_button = await _maybe_get_named_window(self.client.root_window, 'sellAction')
+                # Above logic is for the first item that is sellable, once we sell an item it is 'popped'
+                # out of the stack but we dont update the list of items below this item. If we continued
+                # with the logic whe have we'd sell every other item because the stack shrinks and replaces
+                # the void of the sold item with a new item.
+                if await sell_button.read_value_from_offset(688, 'bool') is True:
+                    # Since the void is replaced with a new item we are checking if the next item in the list is
+                    # sellable, if not go to next item.
+                    continue
+                else:
+                    while await sell_button.read_value_from_offset(688, 'bool') is False:
+                        await asyncio.sleep(1)
+                        item = await get_window_from_path(self.client.root_window, item_path)
+                        messy_item_name = await item.read_wide_string_from_offset(616)
+                        lower_item_name_illegal_characters = messy_item_name.lower()
+                        item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
+                        if item_name in items_to_sell:
+                            await click_window_by_path(self.client, path=item_path)
+                            sell_button = await _maybe_get_named_window(self.client.root_window, 'sellAction')
+                            if await sell_button.read_value_from_offset(688, 'bool') is True:
+                                break
+                            async with self.client.mouse_handler:
+                                await self.client.mouse_handler.click_window(sell_button)
+                                confirm_sale = await _maybe_get_named_window(self.client.root_window, 'leftButton')
+                                await self.client.mouse_handler.click_window(confirm_sale)
+                        else:
+                            break
+
+    async def select_tab_and_call_read_function(self):
+        for tab in self.equippble_tab:
+            await self.read_each_shop_item(tab)
+
+    async def select_houseing_tab_and_call_read_function(self):
+        async with self.client.mouse_handler:
+            await self.client.mouse_handler.click_window_with_name('NextCategory_BackpackStuff')
+        # Go to housing items tab and sell there.
+        for tab in self.housing_tab:
+            await self.read_each_shop_item(tab)
+
+
+
+
+
+
+
+
+
+
 
 
         

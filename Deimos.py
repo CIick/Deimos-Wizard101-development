@@ -158,10 +158,12 @@ def read_config(config_name : str):
 	global buy_potions
 	global client_to_follow
 	global auto_sell
+	global bazzar_sell
 	use_team_up = parser.getboolean('sigil', 'use_team_up', fallback=False)
 	buy_potions = parser.getboolean('settings', 'buy_potions', fallback=True)
 	client_to_follow = parser.get('sigil', 'client_to_follow', fallback=None)
 	auto_sell = parser.getboolean('sigil', 'auto_sell', fallback=False)
+	bazzar_sell = parser.getboolean('sigil', 'bazzar_sell', fallback=False)
 
 
 	# Auto Questing Settings
@@ -1842,6 +1844,7 @@ async def main():
 		p.feeding_pet_status = False
 		p.use_team_up = use_team_up
 		p.auto_sell = auto_sell
+		p.bazzar_sell = bazzar_sell
 		p.dance_hook_status = False
 		p.entity_detect_combat_status = False
 		p.invincible_combat_timer = False

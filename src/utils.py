@@ -420,6 +420,36 @@ async def navigate_to_commons_from_ravenwood(client: Client):
     await wait_for_zone_change(client, current_zone=current_zone)
 
 
+async def navigate_to_shopping_district(client: Client):
+    current_zone = await client.zone_name()
+    await client.teleport(XYZ(1359.4481201171875, -3299.5595703125, -27.9923095703125))
+    await client.goto(1342.4510498046875, -3590.277587890625)
+    while not await client.is_loading():
+        await client.send_key(Keycode.W, 0.1)
+    await wait_for_zone_change(client, current_zone=current_zone)
+
+
+async def navigate_to_olde_town(client: Client):
+    current_zone = await client.zone_name()
+    await client.teleport(XYZ(-5442.1318359375, -3267.8291015625, -29.36358642578125))
+    await client.goto(-6120.72900390625, -3274.565185546875)
+    while not await client.is_loading():
+        await client.send_key(Keycode.W, 0.1)
+    await wait_for_zone_change(client, current_zone=current_zone)
+
+
+async def navigate_to_bazzar(client: Client):
+    current_zone = await client.zone_name()
+    await client.teleport(XYZ(-1493.262451171875, 2224.0732421875, -277.3763427734375))
+    await client.goto(-1699.54345703125, 2245.400146484375)
+    while not await client.is_loading():
+        await client.send_key(Keycode.W, 0.1)
+    await wait_for_zone_change(client, current_zone=current_zone)
+    await client.goto(67.37213134765625, 298.70880126953125)
+    await client.send_key(Keycode.X, seconds=0.2)
+
+
+
 async def navigate_to_potions(client: Client):
     # Teleport to hilda brewer
     Hilda_XYZ = XYZ(-4398.70654296875, 1016.1954345703125, 229.00079345703125)
