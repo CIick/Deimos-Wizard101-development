@@ -51,6 +51,12 @@ class FlashTrash:
         return self.window
 
     async def check_if_client_is_close_to_max_gold(self) -> bool:
+        if not await self._check_if_window_is_visible('DeckConfiguration'):
+            # print('Spell book not open, manually opening spellbook')
+            spellbook = await _maybe_get_named_window(self.client.root_window, "btnSpellbook")
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window(spellbook)
+            await asyncio.sleep(.2)
         select_character_stats_for_max_gold_calculation = await _maybe_get_named_window(self.client.root_window, 'CharStats')
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window(select_character_stats_for_max_gold_calculation)
@@ -70,11 +76,47 @@ class FlashTrash:
         if client_max_gold_safe_zone < client_current_gold:
             logger.debug(f'Client {self.client.title} - is too close to max gold to sell items \nCurrent Gold: {client_current_gold} \nMax Gold: {client_max_gold_safe_zone + 20000} ')
             return True
+        else:
+            return False
 
     async def check_if_client_is_close_to_max_backpack_space(self) -> bool:
-        open_back_pack = await _maybe_get_named_window(self.client.root_window, 'CharStats')
-        async with self.client.mouse_handler:
-            await self.client.mouse_handler.click_window(select_character_stats_for_max_gold_calculation)
+        spell_book_is_open = await self._check_if_window_is_visible('DeckConfiguration')
+
+        # If spell book is not open, it returns none. We go into the "none if statement" and open the spellbook
+        if not spell_book_is_open:
+            # print('Spell book not open, manually opening spellbook')
+            spellbook = await _maybe_get_named_window(self.client.root_window, "btnSpellbook")
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window(spellbook)
+            await asyncio.sleep(.2)
+
+        inventory_page = await self._check_if_window_is_visible('InventorySpellbookPage')
+        # If current page isn't inventory page it returns none. We go into the none if-statement and open the inventory
+        if not inventory_page:
+            # print('Current page is not backpack, switch to backpack page')
+            select_inventory_tab = await _maybe_get_named_window(self.client.root_window, "Inventory")
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window(select_inventory_tab)
+            await asyncio.sleep(.5)
+
+        back_pack_space = await _maybe_get_named_window(self.client.root_window, 'inventorySpace')
+        messy_back_pack_space = await back_pack_space.read_wide_string_from_offset(584)
+        messy_back_pack_space2 = messy_back_pack_space.replace('<center>', '')
+        split_back_pack_space = messy_back_pack_space2.split('/')
+        back_pack_max_string, back_pack_current_string = split_back_pack_space[1], split_back_pack_space[0]
+        back_pack_max, back_pack_current = int(back_pack_max_string), int(back_pack_current_string)
+
+        if spell_book_is_open:
+            # print('Spell book not open, manually opening spellbook')
+            spellbook = await _maybe_get_named_window(self.client.root_window, "btnSpellbook")
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window(spellbook)
+            await asyncio.sleep(.2)
+
+        if back_pack_current > back_pack_max - 89:
+            return True
+        else:
+            return False
 
     async def open_quick_sell_menu(self) -> None:
         # General Logic for detecting if spell book is open, if it's open we need to make sure its on the right tab
@@ -194,13 +236,16 @@ class FlashTrash:
         await self.logic_for_finalizing_sale()
 
     async def goto_bazzar_and_open_sell_tab(self) -> None:
-        # await navigate_to_ravenwood(self.client)
-        # await navigate_to_commons_from_ravenwood(self.client)
-        # await navigate_to_shopping_district(self.client)
-        # await navigate_to_olde_town(self.client)
+        await self.client.send_key(Keycode.PAGE_DOWN)
+        await navigate_to_ravenwood(self.client)
+        await navigate_to_commons_from_ravenwood(self.client)
+        await navigate_to_shopping_district(self.client)
+        await navigate_to_olde_town(self.client)
         await navigate_to_bazzar(self.client)
+        await self.client.send_key(Keycode.PAGE_DOWN)
 
     async def navigate_to_sell_tab(self) -> None:
+        await asyncio.sleep(1)
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window_with_name('sellTab')
 
