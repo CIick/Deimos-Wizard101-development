@@ -301,8 +301,6 @@ async def wait_for_loading_screen(client: Client):
 async def wait_for_zone_change(client: Client, current_zone: str = None, to_zone: str = None, loading_only: bool = False):
     # Wait for zone to change, allows for waiting in team up forever without any extra checks
     logger.debug(f'Client {client.title} - Awaiting loading')
-    await client.send_key(Keycode.X, seconds=0.1)
-    logger.debug(f'Client {client.title} - Presses X just incase X press failed')
     if not loading_only:
         # if to_zone is present, wait until we reach the selected zone
         if to_zone is not None:
