@@ -1,5 +1,6 @@
 import asyncio
 import re
+from wizwalker.memory.memory_reader import MemoryReadError
 from wizwalker.extensions.scripting.utils import _maybe_get_named_window
 from src.utils import *
 from src.items_to_quick_sell import *
@@ -113,7 +114,7 @@ class FlashTrash:
                 await self.client.mouse_handler.click_window(spellbook)
             await asyncio.sleep(.2)
 
-        if back_pack_current > back_pack_max - 89:
+        if back_pack_current > back_pack_max - 10:
             return True
         else:
             return False
@@ -169,11 +170,14 @@ class FlashTrash:
     async def read_each_item(self):
         for i in range(0, 10):
             # We set the path for 'i' which is the item we want to check if we can sell it
-            item = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column0", f"shoplist{i}"])
-            # We set the mouse position over the item to read the meta data of the item
-            messy_item_name = await item.read_wide_string_from_offset(616)
-            lower_item_name_illegal_characters = messy_item_name.lower()
-            item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
+            try:
+                item = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column0", f"shoplist{i}"])
+                messy_item_name = await item.read_wide_string_from_offset(616)
+                lower_item_name_illegal_characters = messy_item_name.lower()
+                item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
+            except MemoryReadError:
+                # If there is no item to sell, we dont care to read each item.
+                break
 
             if item_name in items_to_sell:
                 item_to_sell_check_box = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column1", f"num{i}"])
@@ -213,27 +217,47 @@ class FlashTrash:
     @logger.catch()
     async def open_and_select_backpack_all_tab(self) -> None:
         # Logic for opening backpack to Quick Sell Menu
-        await self.open_quick_sell_menu()
+        try:
+            if not await self.check_if_client_is_close_to_max_gold():
+                await self.open_quick_sell_menu()
+                # Check what page the user is on. If they aren't on the first page, set them to the first page
 
-        # Check what page the user is on. If they aren't on the first page, set them to the first page
-        left_button = await _maybe_get_named_window(self.client.root_window, 'leftscroll')
-        right_button = await _maybe_get_named_window(self.client.root_window, 'rightscroll')
-        if await left_button.is_visible():
-            while not await is_control_grayed(left_button):
-                async with self.client.mouse_handler:
-                    await asyncio.sleep(.2)
-                    await self.client.mouse_handler.click_window(left_button)
-        while not await is_control_grayed(right_button):
-            async with self.client.mouse_handler:
-                await asyncio.sleep(.2)
+                left_button = await _maybe_get_named_window(self.client.root_window, 'leftscroll')
+                right_button = await _maybe_get_named_window(self.client.root_window, 'rightscroll')
+                if await left_button.is_visible():
+                    while not await is_control_grayed(left_button):
+                        async with self.client.mouse_handler:
+                            await asyncio.sleep(.2)
+                            await self.client.mouse_handler.click_window(left_button)
+                while not await is_control_grayed(right_button):
+                    async with self.client.mouse_handler:
+                        await asyncio.sleep(.2)
+                        await self.read_each_item()
+                        await self.client.mouse_handler.click_window(right_button)
+                # Below reads final page contents
                 await self.read_each_item()
-                await self.client.mouse_handler.click_window(right_button)
-        # Below reads final page contents
-        await self.read_each_item()
-        await asyncio.sleep(.2)
+                await asyncio.sleep(.2)
 
-        # Logic for finalizing sale + returning character to neutral state so other tools don't break
-        await self.logic_for_finalizing_sale()
+                # Logic for finalizing sale + returning character to neutral state so other tools don't break
+                await self.logic_for_finalizing_sale()
+            else:
+                logger.debug(f'Client {self.client.title} - is close to max gold, farming continues but no auto sell')
+                async with self.client.mouse_handler:
+                    await self.client.mouse_handler.click_window_with_name('Close_Button')
+        except ValueError:
+            # For what ever reason, Wizard101  allows you to open the spellbook, then open the quick sell, THEN
+            # Again open a new spell_book. UI Tree doesn't register the spellbook behind the quick sell menu
+            # So it messes it up.
+            # This exception normally runs when it tries to get the left_button, because UI Tree see's 2or3 left buttons
+            # So in case the script opens all 3 windows, we do this to just skip this cycle of quick sell
+            # Also this error rarely occurs and happens maybe once every 7 hours, hard to debug when it happens, so we
+            # just do this to fix the issue instead of actually fixing the issue
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window_with_name('Close_Button')
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window_with_name('exit')
+            async with self.client.mouse_handler:
+                await self.client.mouse_handler.click_window_with_name('Close_Button')
 
     async def goto_bazzar_and_open_sell_tab(self) -> None:
         await self.client.send_key(Keycode.PAGE_DOWN)
@@ -256,15 +280,18 @@ class FlashTrash:
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window_with_name(tab)
         for i in range(0, 7):
-            # We set the path for 'i' which is the item we want to check if we can sell it
-            item_path = ["WorldView", "shopGUI", "sellWindow", f"shoplist{i}"]
-            item = await get_window_from_path(self.client.root_window, item_path)
-            messy_item_name = await item.read_wide_string_from_offset(616)
-            lower_item_name_illegal_characters = messy_item_name.lower()
-            item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
-            # Below logic is cancer, but I don't see a problem with it. It checks if items can be sold,
-            # If item is sold it re-gets the index of the item sold because selling the item removes it from your
-            # sellable inventory and puts a new item in that slot, we check if THAT item is
+            try:
+                # We set the path for 'i' which is the item we want to check if we can sell it
+                item_path = ["WorldView", "shopGUI", "sellWindow", f"shoplist{i}"]
+                item = await get_window_from_path(self.client.root_window, item_path)
+                messy_item_name = await item.read_wide_string_from_offset(616)
+                lower_item_name_illegal_characters = messy_item_name.lower()
+                item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
+                # Below logic is cancer, but I don't see a problem with it. It checks if items can be sold,
+                # If item is sold it re-gets the index of the item sold because selling the item removes it from your
+                # sellable inventory and puts a new item in that slot, we check if THAT item is
+            except MemoryReadError:
+                pass
             if item_name in items_to_sell:
                 # If item is in list of items to sell, enter this code
                 await click_window_by_path(self.client, path=item_path)
@@ -295,6 +322,8 @@ class FlashTrash:
                                 await self.client.mouse_handler.click_window(confirm_sale)
                         else:
                             break
+            else:
+                pass
 
     async def select_tab_and_call_read_function(self):
         for tab in self.equippble_tab:
