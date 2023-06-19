@@ -44,6 +44,8 @@ class GUICommandType(Enum):
 
 	SetScale = auto()
 
+	parse_inventory = auto()
+
 	# deimos -> window
 	UpdateWindow = auto()
 	UpdateWindowValues = auto()
@@ -53,31 +55,38 @@ class GUICommandType(Enum):
 # - inherit from StrEnum in 3.11 to make this nicer
 # - fix naming convention, it's inconsistent
 class GUIKeys:
+	# Main Toggles
 	toggle_speedhack = "togglespeedhack"
 	toggle_combat = "togglecombat"
 	toggle_dialogue = "toggledialogue"
 	toggle_sigil = "togglesigil"
 	toggle_questing = "toggle_questing"
 	toggle_auto_pet = "toggleautopet"
-	toggle_freecam = "togglefreecam"
-	toggle_camera_collision = "togglecameracollision"
 
+	# Hotkeys
+	toggle_freecam = "togglefreecam"
 	hotkey_quest_tp = "hotkeyquesttp"
 	hotkey_freecam_tp = "hotkeyfreecamtp"
 
+	# Mass Clients Hotkeys
 	mass_hotkey_mass_tp = "masshotkeymasstp"
 	mass_hotkey_xyz_sync = "masshotkeyxyzsync"
 	mass_hotkey_x_press = "masshotkeyxpress"
 
+	# Camera Buttons
+	toggle_camera_collision = "togglecameracollision"
+	copy_camera_position = "copycameraposition"
+	copy_camera_rotation = "copycamerarotation"
+	button_set_camera_position = "buttonsetcameraposition"
+	button_anchor = "buttonanchor"
+	button_set_distance = "buttonsetdistance"
+
+	# Dev Utils Buttons
 	copy_position = "copyposition"
 	copy_zone = "copyzone"
 	copy_rotation = "copyrotation"
 	copy_entity_list = "copyentitylist"
 	copy_ui_tree = "copyuitree"
-	copy_camera_position = "copycameraposition"
-	copy_stats = "copystats"
-	copy_camera_rotation = "copycamerarotation"
-
 	button_custom_tp = "buttoncustomtp"
 	button_entity_tp = "buttonentitytp"
 	button_go_to_zone = "buttongotozone"
@@ -88,17 +97,24 @@ class GUIKeys:
 	button_mass_go_to_bazaar = "buttonmassgotobazaar"
 	button_refill_potions = "buttonrefillpotions"
 	button_mass_refill_potions = "buttonmassrefillpotions"
-	button_set_camera_position = "buttonsetcameraposition"
-	button_anchor = "buttonanchor"
-	button_set_distance = "buttonsetdistance"
+
+	# Stats Buttons
+	copy_stats = "copystats"
 	button_view_stats = "buttonviewstats"
 	button_swap_members = "buttonswapmembers"
+
+	# Flythrough Buttons
 	button_execute_flythrough = "buttonexecuteflythrough"
 	button_kill_flythrough = "buttonkillflythrough"
+
+	# Bot Buttons
 	button_run_bot = "buttonrunbot"
 	button_kill_bot = "buttonkillbot"
-	button_set_scale = "buttonsetscale"
+	# Inventory buttons
+	button_parse_inventory_items = "buttonparseinventoryitems"
 
+	# Misc Buttons
+	button_set_scale = "buttonsetscale"
 
 class GUICommand:
 	def __init__(self, com_type: GUICommandType, data=None):
@@ -122,7 +138,7 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 		gettext.textdomain('messages')
 		tl = gettext.gettext
 
-	gui.popup(tl('Deimos will always be free and open-source.\nBy using Deimos, you agree to the GPL v3 license agreement.\nIf you bought this, you got scammed!'), title=tl('License Agreement'), keep_on_top=True, text_color=gui_text_color, button_color=(gui_text_color, gui_button_color))
+	# gui.popup(tl('Deimos will always be free and open-source.\nBy using Deimos, you agree to the GPL v3 license agreement.\nIf you bought this, you got scammed!'), title=tl('License Agreement'), keep_on_top=True, text_color=gui_text_color, button_color=(gui_text_color, gui_button_color))
 
 	global hotkey_button
 	original_hotkey_button = hotkey_button
@@ -166,9 +182,9 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 
 	zone_info = gui.Text(tl('Zone') + ': ', key='Zone', auto_size_text=False, size=(62, 1), text_color=gui_text_color)
 
-	copy_pos = hotkey_button(tl('Copy Position'), GUIKeys.copy_position)
+	copy_pos = hotkey_button(tl('Copy Position'), GUIKeys.copy_position, auto_size=True)
 	copy_zone = hotkey_button(tl('Copy Zone'), GUIKeys.copy_zone)
-	copy_yaw = hotkey_button(tl('Copy Rotation'), GUIKeys.copy_rotation)
+	copy_yaw = hotkey_button(tl('Copy Rotation'), GUIKeys.copy_rotation, auto_size=True)
 
 	client_info_layout = [
 		[client_title],
@@ -333,6 +349,20 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 
 	framed_misc_utils_layout = gui.Frame(tl('Misc Utils'), misc_utils_layout, title_color=gui_text_color)
 
+	inventory_features_layout = [
+		[gui.Text(dev_utils_notice, text_color=gui_text_color)],
+		[gui.Multiline(key='inventory', size=(66, 11), text_color=gui_text_color, horizontal_scroll=True)],
+		[
+			gui.Input(key='import_items_to_sell', visible=False),
+			gui.FileBrowse('Import Items to Sell', file_types=(("Text Files", "*.txt"),), auto_size_button=True, button_color=(gui_text_color, gui_button_color)),
+			gui.Input(key='export_items_to_sell', visible=False),
+			gui.FileSaveAs('Save Items to Sell', file_types=(("Text Files", "*.txt"),), auto_size_button=True, button_color=(gui_text_color, gui_button_color)),
+			hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=False),
+		],
+	]
+
+	framed_inventory_features_layout = gui.Frame(tl('Inventory'), inventory_features_layout, title_color=gui_text_color)
+
 	tabs = [
 		[
 			gui.Tab(tl('Hotkeys'), [[framed_toggles_layout, framed_hotkeys_layout, framed_mass_hotkeys_layout, framed_utils_layout]], title_color=gui_text_color),
@@ -341,6 +371,7 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 			gui.Tab(tl('Stat Viewer'), [[framed_stat_viewer_layout]], title_color=gui_text_color),
 			gui.Tab(tl('Flythrough'), [[framed_flythrough_layout]], title_color=gui_text_color),
 			gui.Tab(tl('Bot'), [[framed_bot_creator_layout]], title_color=gui_text_color),
+			gui.Tab(tl('Inventory'), [[framed_inventory_features_layout]], title_color=gui_text_color),
 			gui.Tab(tl('Misc'), [[framed_misc_utils_layout]], title_color=gui_text_color)
 		]
 	]
@@ -520,6 +551,8 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 			# 		send_queue.put(GUICommand(GUICommandType.SetPetWorld, (False, str(inputs['PetWorldInput']))))
 
 			# Other
+			case GUIKeys.button_parse_inventory_items:
+				send_queue.put(GUICommand(GUICommandType.parse_inventory))
 			case _:
 				pass
 
@@ -549,4 +582,6 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 		import_check('bot_file_path', 'bot_creator')
 		export_check('bot_save_path', 'bot_creator')
 
+		# import_check('import_items_to_sell', 'inventory')
+		# export_check('export_items_to_sell', 'inventory')
 	window.close()

@@ -33,6 +33,7 @@ from src.questing import Quester
 from src.sigil import Sigil
 from src.utils import index_with_str, is_visible_by_path, is_free, auto_potions, auto_potions_force_buy, to_world, collect_wisps_with_limit, try_task_coro, read_webpage, override_wiz_install_using_handle, get_window_from_path#, assign_pet_level
 from src.paths import advance_dialog_path, decline_quest_path, team_up_button_path
+from src.parse_inventory_contents import ParsePack
 import PySimpleGUI as gui
 import pyperclip
 from src.sprinty_client import SprintyClient
@@ -1342,7 +1343,6 @@ async def main():
 											pyperclip.copy('\n'.join(enemy_stats))
 										else:
 											logger.info('No stats are loaded. Select an enemy index corresponding to its position on the duel circle, then click the copy button.')
-
 									case _:
 										logger.debug(f'Unknown copy value: {com.data}')
 
@@ -1571,6 +1571,9 @@ async def main():
 								logger.debug(f'Set Scale to {desired_scale}')
 								await asyncio.gather(*[client.body.write_scale(desired_scale) for client in walker.clients])
 
+							case deimosgui.GUICommandType.parse_inventory:
+								async with ParsePack(walker.clients[0]) as parse_pack:
+									await parse_pack.open_and_select_backpack_all_tab()
 				except queue.Empty:
 					pass
 
