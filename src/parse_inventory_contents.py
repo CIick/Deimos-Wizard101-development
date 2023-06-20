@@ -132,9 +132,9 @@ class ParsePack:
         _master_string_of_inventory_items = self.remove_special_chars(messy_master_string_of_inventory_items)
 
         # Below was the only way I could get it to remove the damn two trailing char's I didn't want.....
-        master_string_of_inventory_items = re.sub("(.*)(.{2}$)", reg, _master_string_of_inventory_items)
+        # master_string_of_inventory_items = re.sub("(.*)(.{2}$)", reg, _master_string_of_inventory_items)
 
-        pyperclip.copy(master_string_of_inventory_items)
+        pyperclip.copy(_master_string_of_inventory_items)
         logger.debug(f'Client {self.client.title} - copied items in backpack to clipboard')
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window_with_name('exit')

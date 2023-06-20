@@ -2,7 +2,9 @@ from enum import Enum, auto
 import gettext
 import queue
 import re
+import os
 import PySimpleGUI as gui
+from loguru import logger
 from src.combat_objects import school_id_to_names
 from src.paths import wizard_city_dance_game_path
 from src.utils import assign_pet_level
@@ -46,6 +48,7 @@ class GUICommandType(Enum):
 
 	# Inventory buttons
 	parse_inventory = auto()
+	append_items_to_sell = auto()
 
 	# deimos -> window
 	UpdateWindow = auto()
@@ -111,8 +114,11 @@ class GUIKeys:
 	# Bot Buttons
 	button_run_bot = "buttonrunbot"
 	button_kill_bot = "buttonkillbot"
+
 	# Inventory buttons
 	button_parse_inventory_items = "buttonparseinventoryitems"
+	button_append_items_to_sell = "buttonappenditemstosell"
+	button_remove_items_to_sell = "buttonremoveitemstosell"
 
 	# Misc Buttons
 	button_set_scale = "buttonsetscale"
@@ -352,14 +358,13 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 
 	inventory_features_layout = [
 		[gui.Text(dev_utils_notice, text_color=gui_text_color)],
-		[gui.Multiline(key='inventory', size=(66, 11), text_color=gui_text_color, horizontal_scroll=True)],
-		[
-			gui.Input(key='import_items_to_sell', visible=False),
-			gui.FileBrowse('Import Items to Sell', file_types=(("Text Files", "*.txt"),), auto_size_button=True, button_color=(gui_text_color, gui_button_color)),
-			gui.Input(key='export_items_to_sell', visible=False),
-			gui.FileSaveAs('Save Items to Sell', file_types=(("Text Files", "*.txt"),), auto_size_button=True, button_color=(gui_text_color, gui_button_color)),
-			hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=True),
-		],
+		[hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=True)],
+		[gui.Text('🢃🢃🢃 Insert items below to sell separated by a comma to add them to the sell list 🢃🢃🢃', text_color=gui_text_color)],
+		[gui.Multiline(key='append_button', text_color=gui_text_color, horizontal_scroll=True)],
+		[hotkey_button(tl('Append Items To Sell'), GUIKeys.button_append_items_to_sell, auto_size=True)],
+		[gui.Text('🢃🢃🢃 Insert items below to sell separated by a comma to remove them from the sell list 🢃🢃🢃', text_color=gui_text_color)],
+		[gui.Multiline(key='remove_button', text_color=gui_text_color, horizontal_scroll=True)],
+		[hotkey_button(tl('Remove Items From Sell List'), GUIKeys.button_remove_items_to_sell, auto_size=True)],
 	]
 
 	framed_inventory_features_layout = gui.Frame(tl('Inventory'), inventory_features_layout, title_color=gui_text_color)
@@ -554,10 +559,32 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 			# Other
 			case GUIKeys.button_parse_inventory_items:
 				send_queue.put(GUICommand(GUICommandType.parse_inventory))
+			case GUIKeys.button_append_items_to_sell:
+				user_input = inputs['append_button']
+				if user_input == '':
+					logger.debug('Error: User tried to enter NULL to "append" to items to sell')
+				else:
+					file_path = 'items_to_sell.txt'
+					if os.stat(file_path).st_size == 0:
+						with open(file_path, 'a') as file:
+							file.write(user_input)
+							logger.debug('Successfully created items to sell')
+					else:
+						with open(file_path, 'a') as file:
+							file.write(',' + user_input)
+							logger.debug('Successfully appended items to sell list')
+			case GUIKeys.button_remove_items_to_sell:
+				user_input = inputs['remove_button']
+				if user_input == '':
+					logger.debug('Error: User tried to enter NULL to "remove" to items to sell')
+				else:
+					file_of_items_to_sell = open("items_to_sell.txt", "r")
+					string_of_list_of_items_to_sell = file_of_items_to_sell.read()
+					list_of_items_to_sell = string_of_list_of_items_to_sell.split(",")
 			case _:
 				pass
 
-		#Updates pet world when it changes, without the need for a button press -slack
+		# Updates pet world when it changes, without the need for a button press -slack
 		if inputs and inputs['PetWorldInput'] != wizard_city_dance_game_path[-1]:
 			assign_pet_level(inputs['PetWorldInput'])
 
@@ -582,7 +609,4 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 
 		import_check('bot_file_path', 'bot_creator')
 		export_check('bot_save_path', 'bot_creator')
-
-		import_check('import_items_to_sell', 'inventory')
-		export_check('export_items_to_sell', 'inventory')
 	window.close()
