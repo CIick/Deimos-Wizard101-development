@@ -44,6 +44,7 @@ class GUICommandType(Enum):
 
 	SetScale = auto()
 
+	# Inventory buttons
 	parse_inventory = auto()
 
 	# deimos -> window
@@ -357,7 +358,7 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 			gui.FileBrowse('Import Items to Sell', file_types=(("Text Files", "*.txt"),), auto_size_button=True, button_color=(gui_text_color, gui_button_color)),
 			gui.Input(key='export_items_to_sell', visible=False),
 			gui.FileSaveAs('Save Items to Sell', file_types=(("Text Files", "*.txt"),), auto_size_button=True, button_color=(gui_text_color, gui_button_color)),
-			hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=False),
+			hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=True),
 		],
 	]
 
@@ -582,6 +583,6 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 		import_check('bot_file_path', 'bot_creator')
 		export_check('bot_save_path', 'bot_creator')
 
-		# import_check('import_items_to_sell', 'inventory')
-		# export_check('export_items_to_sell', 'inventory')
+		import_check('import_items_to_sell', 'inventory')
+		export_check('export_items_to_sell', 'inventory')
 	window.close()

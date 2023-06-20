@@ -10,3 +10,4 @@ src/.idea/vcs.xml
 .idea/discord.xml
 Deimos.exe
 .idea/discord.xml
+parse_items_in_inventory.py
