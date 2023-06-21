@@ -3,7 +3,6 @@ import re
 from wizwalker.memory.memory_reader import MemoryReadError
 from wizwalker.extensions.scripting.utils import _maybe_get_named_window
 from src.utils import *
-from src.items_to_quick_sell import *
 from loguru import logger
 
 
@@ -177,9 +176,14 @@ class FlashTrash:
                 item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
             except MemoryReadError:
                 # If there is no item to sell, we dont care to read each item.
-                break
+                pass
 
-            if item_name in items_to_sell:
+            # Convert String to list of items to sell
+            file_of_items_to_sell = open('items_to_sell.txt', 'r')
+            string_of_items_to_sell = file_of_items_to_sell.read()
+            list_of_items_to_sell = string_of_items_to_sell.split(",")
+
+            if item_name in list_of_items_to_sell:
                 item_to_sell_check_box = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column1", f"num{i}"])
                 check_box_rectangle = await item_to_sell_check_box.scale_to_client()
                 async with self.client.mouse_handler:
@@ -195,6 +199,11 @@ class FlashTrash:
             confirm_quick_sell_items = await _maybe_get_named_window(self.client.root_window, 'SellButton')
             async with self.client.mouse_handler:
                 await self.client.mouse_handler.click_window(confirm_quick_sell_items)
+
+            if await self._check_if_window_is_visible('leftButton'):
+                confirm_quick_sell_crowns_item = await _maybe_get_named_window(self.client.root_window,'leftButton')
+                async with self.client.mouse_handler:
+                    await self.client.mouse_handler.click_window(confirm_quick_sell_crowns_item)
 
             please_wait = await get_window_from_path(self.client.root_window, ['WorldView', 'shopGUI', 'QuickSellWaitingWindow'])
             while await please_wait.is_visible():

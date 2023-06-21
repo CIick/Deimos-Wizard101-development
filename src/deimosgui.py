@@ -574,13 +574,30 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 							file.write(',' + user_input)
 							logger.debug('Successfully appended items to sell list')
 			case GUIKeys.button_remove_items_to_sell:
-				user_input = inputs['remove_button']
-				if user_input == '':
+				string_of_user_input = inputs['remove_button']
+				if string_of_user_input == '':
 					logger.debug('Error: User tried to enter NULL to "remove" to items to sell')
 				else:
-					file_of_items_to_sell = open("items_to_sell.txt", "r")
+					file_path = 'items_to_sell.txt'
+					file_of_items_to_sell = open(file_path, "r")
 					string_of_list_of_items_to_sell = file_of_items_to_sell.read()
 					list_of_items_to_sell = string_of_list_of_items_to_sell.split(",")
+
+					list_of_user_inputs = string_of_user_input.split(",")
+					# print('User wants to remove:', list_of_user_inputs)
+					# print('Current list of items to sell (not updated):', list_of_items_to_sell)
+					for item_to_remove_from_sell_list in list_of_user_inputs:
+						if item_to_remove_from_sell_list in list_of_items_to_sell:
+							list_of_items_to_sell.remove(item_to_remove_from_sell_list)
+
+					file_of_items_to_sell.close()
+					updated_string_of_items_to_sell: str = ','.join(map(str, list_of_items_to_sell))
+					# print('Updated list of items to sell (not updated):', updated_string_of_items_to_sell)
+
+					new_list_with_items_removed = open(file_path, 'w')
+					new_list_with_items_removed.write(updated_string_of_items_to_sell)
+					new_list_with_items_removed.close()
+					logger.debug(f'Successfully removed items to sell: {list_of_user_inputs}')
 			case _:
 				pass
 

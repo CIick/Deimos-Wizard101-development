@@ -125,16 +125,17 @@ class ParsePack:
         for i in dupped_list_of_inventory_items:
             if op.countOf(dupped_list_of_inventory_items, i) >= 1 and (i not in master_list_of_inventory_items):
                 master_list_of_inventory_items.append(i)
-
         # paperclip doesn't like lists, so we convert it to a sting
-        messy_master_string_of_inventory_items: str = ','.join(map(str, master_list_of_inventory_items))
+        messy_master_string_of_inventory_items: str = ','.join(map(str,master_list_of_inventory_items))
 
-        _master_string_of_inventory_items = self.remove_special_chars(messy_master_string_of_inventory_items)
+        __master_string_of_inventory_items = self.remove_special_chars(messy_master_string_of_inventory_items)
+
+        _master_list_of_inventory_items = __master_string_of_inventory_items.replace(', ', ',')
+        master_list_of_inventory_items = _master_list_of_inventory_items.replace(' ,', ',')
 
         # Below was the only way I could get it to remove the damn two trailing char's I didn't want.....
         # master_string_of_inventory_items = re.sub("(.*)(.{2}$)", reg, _master_string_of_inventory_items)
-
-        pyperclip.copy(_master_string_of_inventory_items)
+        pyperclip.copy(master_list_of_inventory_items)
         logger.debug(f'Client {self.client.title} - copied items in backpack to clipboard')
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window_with_name('exit')
@@ -148,9 +149,12 @@ class ParsePack:
             item = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column0", f"shoplist{i}"])
             # We set the mouse position over the item to read the meta data of the item
             messy_item_name = await item.read_wide_string_from_offset(616)
-            lower_item_name_illegal_characters = messy_item_name.lower()
-            item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
-            list_of_items_in_inventory_dupes.append(item_name)
+            if messy_item_name is '':
+                pass
+            else:
+                lower_item_name_illegal_characters = messy_item_name.lower()
+                item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
+                list_of_items_in_inventory_dupes.append(item_name)
         # list_of_items_in_inventory = dict.fromkeys(list_of_items_in_inventory_dupes)
         # return list_of_items_in_inventory
         return list_of_items_in_inventory_dupes
