@@ -303,7 +303,13 @@ class FlashTrash:
                 # sellable inventory and puts a new item in that slot, we check if THAT item is
             except MemoryReadError:
                 pass
-            if item_name in items_to_sell:
+
+            # Convert String to list of items to sell
+            file_of_items_to_sell = open('items_to_sell.txt', 'r')
+            string_of_items_to_sell = file_of_items_to_sell.read()
+            list_of_items_to_sell = string_of_items_to_sell.split(",")
+
+            if item_name in list_of_items_to_sell:
                 # If item is in list of items to sell, enter this code
                 await click_window_by_path(self.client, path=item_path)
                 sell_button = await _maybe_get_named_window(self.client.root_window, 'sellAction')
@@ -322,7 +328,7 @@ class FlashTrash:
                         messy_item_name = await item.read_wide_string_from_offset(616)
                         lower_item_name_illegal_characters = messy_item_name.lower()
                         item_name = re.sub('[^A-Za-z0-9 ]+', '', lower_item_name_illegal_characters)
-                        if item_name in items_to_sell:
+                        if item_name in list_of_items_to_sell:
                             await click_window_by_path(self.client, path=item_path)
                             sell_button = await _maybe_get_named_window(self.client.root_window, 'sellAction')
                             if await sell_button.read_value_from_offset(688, 'bool') is True:
