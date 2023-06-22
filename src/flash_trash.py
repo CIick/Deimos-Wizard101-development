@@ -211,6 +211,8 @@ class FlashTrash:
                     please_wait = await _maybe_get_named_window(self.client.root_window, 'QuickSellWaitingWindow')
                 except ValueError:
                     break
+                except AttributeError:
+                    break
         else:
             close_shop = await _maybe_get_named_window(self.client.root_window, 'exit')
             async with self.client.mouse_handler:
