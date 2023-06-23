@@ -359,6 +359,8 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 	inventory_features_layout = [
 		[gui.Text(dev_utils_notice, text_color=gui_text_color)],
 		[hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=True)],
+		[gui.Text('Select items below to add to quick sell list', text_color=gui_text_color)],
+		[gui.Listbox(values=['test', 'test'], select_mode=gui.LISTBOX_SELECT_MODE_MULTIPLE, size=(16, 4), key='append_list')],
 		[gui.Text('🢃🢃🢃 Insert items below to sell separated by a comma to add them to the sell list 🢃🢃🢃', text_color=gui_text_color)],
 		[gui.Multiline(key='append_button', text_color=gui_text_color, horizontal_scroll=True)],
 		[hotkey_button(tl('Append Items To Sell'), GUIKeys.button_append_items_to_sell, auto_size=True)],
@@ -559,6 +561,8 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 			# Other
 			case GUIKeys.button_parse_inventory_items:
 				send_queue.put(GUICommand(GUICommandType.parse_inventory))
+				# gui.Popup(f"Successfully parsed inventory and stored it in 'parsed_inventory.txt'", keep_on_top=True)
+				# Above needs to wait for function to finish, now clue how so just commented out for now
 			case GUIKeys.button_append_items_to_sell:
 				user_input = inputs['append_button']
 				if user_input == '':

@@ -63,7 +63,7 @@ class ParsePack:
         except ValueError:
             logger.debug(f'Client {self.client.title} - Attempted to close inventory windows')
 
-    async def open_and_select_backpack_all_tab(self) -> None:
+    async def open_and_select_backpack_all_tab(self) -> str:
         def reg(m):
             return m.group(1)
         await self.attempt_to_close_all_windows()
@@ -141,6 +141,7 @@ class ParsePack:
             await self.client.mouse_handler.click_window_with_name('exit')
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window_with_name('Close_Button')
+        return master_list_of_inventory_items
 
     async def read_each_item(self) -> list:
         list_of_items_in_inventory_dupes = []

@@ -1572,8 +1572,13 @@ async def main():
 								await asyncio.gather(*[client.body.write_scale(desired_scale) for client in walker.clients])
 
 							case deimosgui.GUICommandType.parse_inventory:
-								async with ParsePack(walker.clients[0]) as parse_pack:
-									await parse_pack.open_and_select_backpack_all_tab()
+								if foreground_client:
+									async with ParsePack(foreground_client) as parse_pack:
+										string_of_items = await parse_pack.open_and_select_backpack_all_tab()
+									file_of_items_parsed = open('parsed_inventory.txt', 'w')
+									file_of_items_parsed.write(string_of_items)
+									file_of_items_parsed.close()
+									logger.debug(f"{foreground_client.title} - Successfully parsed inventory and stored it in 'parsed_inventory.txt'")
 				except queue.Empty:
 					pass
 
