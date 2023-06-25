@@ -150,7 +150,7 @@ class ParsePack:
             item = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column0", f"shoplist{i}"])
             # We set the mouse position over the item to read the meta data of the item
             messy_item_name = await item.read_wide_string_from_offset(616)
-            if messy_item_name is '':
+            if messy_item_name == '':
                 pass
             else:
                 lower_item_name_illegal_characters = messy_item_name.lower()

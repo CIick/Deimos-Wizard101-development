@@ -3,6 +3,7 @@ import gettext
 import queue
 import re
 import os
+import operator as op
 import PySimpleGUI as gui
 from loguru import logger
 from src.combat_objects import school_id_to_names
@@ -49,6 +50,7 @@ class GUICommandType(Enum):
 	# Inventory buttons
 	parse_inventory = auto()
 	append_items_to_sell = auto()
+	append_items_list = ()
 
 	# deimos -> window
 	UpdateWindow = auto()
@@ -119,7 +121,7 @@ class GUIKeys:
 	button_parse_inventory_items = "buttonparseinventoryitems"
 	button_append_items_to_sell = "buttonappenditemstosell"
 	button_remove_items_to_sell = "buttonremoveitemstosell"
-
+	append_list = "appendlist"
 	# Misc Buttons
 	button_set_scale = "buttonsetscale"
 
@@ -152,6 +154,19 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 
 	def hotkey_button(name, key, auto_size=False, text_color=gui_text_color, button_color=gui_button_color):
 		return original_hotkey_button(name, key, auto_size, text_color, button_color)
+
+	def get_parsed_inventory(filepath: str) -> list:
+		file_of_items_parsed = open(filepath, 'r')
+		string_of_items = file_of_items_parsed.read()
+		_list_of_items = string_of_items.split(',')
+		# Remove duplicate items in list
+		list_of_items_to_append = []
+		for i in _list_of_items:
+			if op.countOf(_list_of_items, i) >= 1 and (i not in list_of_items_to_append):
+				list_of_items_to_append.append(i)
+		file_of_items_parsed.close()
+		return list_of_items_to_append
+
 
 	# TODO: Switch to using keys for this stuff
 	toggles: list[tuple[str, str]] = [
@@ -359,17 +374,21 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 	inventory_features_layout = [
 		[gui.Text(dev_utils_notice, text_color=gui_text_color)],
 		[hotkey_button(tl('Parse Inventory Items'), GUIKeys.button_parse_inventory_items, auto_size=True)],
-		[gui.Text('Select items below to add to quick sell list', text_color=gui_text_color)],
-		[gui.Listbox(values=['test', 'test'], select_mode=gui.LISTBOX_SELECT_MODE_MULTIPLE, size=(16, 4), key='append_list')],
-		[gui.Text('🢃🢃🢃 Insert items below to sell separated by a comma to add them to the sell list 🢃🢃🢃', text_color=gui_text_color)],
-		[gui.Multiline(key='append_button', text_color=gui_text_color, horizontal_scroll=True)],
+
+		[gui.Text('Select items below to add the items to the quick sell list', text_color=gui_text_color)],
+		[gui.Listbox(values=get_parsed_inventory(filepath='parsed_inventory.txt'), select_mode=gui.LISTBOX_SELECT_MODE_MULTIPLE, size=(24, 4), key='append_items_list')],
 		[hotkey_button(tl('Append Items To Sell'), GUIKeys.button_append_items_to_sell, auto_size=True)],
-		[gui.Text('🢃🢃🢃 Insert items below to sell separated by a comma to remove them from the sell list 🢃🢃🢃', text_color=gui_text_color)],
-		[gui.Multiline(key='remove_button', text_color=gui_text_color, horizontal_scroll=True)],
-		[hotkey_button(tl('Remove Items From Sell List'), GUIKeys.button_remove_items_to_sell, auto_size=True)],
 	]
 
-	framed_inventory_features_layout = gui.Frame(tl('Inventory'), inventory_features_layout, title_color=gui_text_color)
+	framed_inventory_features_layout = gui.Frame(tl('Append items to items_to_sell.txt'), inventory_features_layout, title_color=gui_text_color)
+
+	inventory_features_layout2 = [
+		[gui.Text('Select items below to remove the items from the quick sell list', text_color=gui_text_color)],
+		[gui.Listbox(values=get_parsed_inventory(filepath='items_to_sell.txt'), select_mode=gui.LISTBOX_SELECT_MODE_MULTIPLE, size=(24, 4), key='remove_items_list')],
+		[hotkey_button(tl('Append Items To Sell'), GUIKeys.button_remove_items_to_sell, auto_size=True)],
+	]
+
+	framed_inventory_features_layout2 = gui.Frame(tl('Remove Items from items_to_sell.txt'), inventory_features_layout2, title_color=gui_text_color)
 
 	tabs = [
 		[
@@ -379,7 +398,7 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 			gui.Tab(tl('Stat Viewer'), [[framed_stat_viewer_layout]], title_color=gui_text_color),
 			gui.Tab(tl('Flythrough'), [[framed_flythrough_layout]], title_color=gui_text_color),
 			gui.Tab(tl('Bot'), [[framed_bot_creator_layout]], title_color=gui_text_color),
-			gui.Tab(tl('Inventory'), [[framed_inventory_features_layout]], title_color=gui_text_color),
+			gui.Tab(tl('Inventory'), [[framed_inventory_features_layout], [framed_inventory_features_layout2]], title_color=gui_text_color),
 			gui.Tab(tl('Misc'), [[framed_misc_utils_layout]], title_color=gui_text_color)
 		]
 	]
@@ -564,7 +583,8 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 				# gui.Popup(f"Successfully parsed inventory and stored it in 'parsed_inventory.txt'", keep_on_top=True)
 				# Above needs to wait for function to finish, now clue how so just commented out for now
 			case GUIKeys.button_append_items_to_sell:
-				user_input = inputs['append_button']
+				_user_input = inputs['append_items_list']
+				user_input: str = ','.join(map(str, _user_input))
 				if user_input == '':
 					logger.debug('Error: User tried to enter NULL to "append" to items to sell')
 				else:
@@ -577,31 +597,35 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 						with open(file_path, 'a') as file:
 							file.write(',' + user_input)
 							logger.debug('Successfully appended items to sell list')
+
 			case GUIKeys.button_remove_items_to_sell:
-				string_of_user_input = inputs['remove_button']
+				# string_of_user_input = selected items from list box
+				string_of_user_input = inputs['remove_items_list']
 				if string_of_user_input == '':
 					logger.debug('Error: User tried to enter NULL to "remove" to items to sell')
 				else:
+					# Reading the items to sell.txt
 					file_path = 'items_to_sell.txt'
 					file_of_items_to_sell = open(file_path, "r")
 					string_of_list_of_items_to_sell = file_of_items_to_sell.read()
 					list_of_items_to_sell = string_of_list_of_items_to_sell.split(",")
 
-					list_of_user_inputs = string_of_user_input.split(",")
-					# print('User wants to remove:', list_of_user_inputs)
-					# print('Current list of items to sell (not updated):', list_of_items_to_sell)
-					for item_to_remove_from_sell_list in list_of_user_inputs:
-						if item_to_remove_from_sell_list in list_of_items_to_sell:
+					# Matching items to items in the file and remove it from the list
+					for item_to_remove_from_sell_list in string_of_user_input:
+						if item_to_remove_from_sell_list in string_of_user_input:
 							list_of_items_to_sell.remove(item_to_remove_from_sell_list)
 
 					file_of_items_to_sell.close()
+					# Here is where I want it to update the listbox element for PySimpleGUI but nothing is updated
+					send_queue.put(GUICommand(GUICommandType.UpdateWindow, ('remove_items_list', list_of_items_to_sell)))
+					# Convert list to string
 					updated_string_of_items_to_sell: str = ','.join(map(str, list_of_items_to_sell))
-					# print('Updated list of items to sell (not updated):', updated_string_of_items_to_sell)
 
+					# Write string to file so it can be read by
 					new_list_with_items_removed = open(file_path, 'w')
 					new_list_with_items_removed.write(updated_string_of_items_to_sell)
 					new_list_with_items_removed.close()
-					logger.debug(f'Successfully removed items to sell: {list_of_user_inputs}')
+					logger.debug(f'Successfully removed items to sell: {string_of_user_input}')
 			case _:
 				pass
 

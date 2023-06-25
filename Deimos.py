@@ -1578,7 +1578,9 @@ async def main():
 									file_of_items_parsed = open('parsed_inventory.txt', 'w')
 									file_of_items_parsed.write(string_of_items)
 									file_of_items_parsed.close()
+									list_of_items = string_of_items.split(",")
 									logger.debug(f"{foreground_client.title} - Successfully parsed inventory and stored it in 'parsed_inventory.txt'")
+									gui_send_queue.put(deimosgui.GUICommand(deimosgui.GUICommandType.UpdateWindow, ('append_items_list', list_of_items)))
 				except queue.Empty:
 					pass
 
