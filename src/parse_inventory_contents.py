@@ -1,6 +1,7 @@
 import re
 import operator as op
 from wizwalker.extensions.scripting.utils import _maybe_get_named_window
+from wizwalker.errors import MemoryReadError
 from src.utils import *
 import asyncio
 from wizwalker.client_handler import ClientHandler
@@ -136,7 +137,7 @@ class ParsePack:
         # Below was the only way I could get it to remove the damn two trailing char's I didn't want.....
         # master_string_of_inventory_items = re.sub("(.*)(.{2}$)", reg, _master_string_of_inventory_items)
         pyperclip.copy(master_list_of_inventory_items)
-        logger.debug(f'Client {self.client.title} - copied items in backpack to clipboard')
+        logger.debug(f'Client {self.client.title} - copied items in backpack to clipboard, if you want to manually add every item')
         async with self.client.mouse_handler:
             await self.client.mouse_handler.click_window_with_name('exit')
         async with self.client.mouse_handler:
@@ -149,7 +150,23 @@ class ParsePack:
             # We set the path for 'i' which is the item we want to check if we can sell it
             item = await get_window_from_path(self.client.root_window, ["WorldView", "shopGUI", "buyWindow", "column0", f"shoplist{i}"])
             # We set the mouse position over the item to read the meta data of the item
-            messy_item_name = await item.read_wide_string_from_offset(616)
+            # messy_item_name = await item.read_wide_string_from_offset(616)
+            try:
+                messy_item_name = await item.read_wide_string_from_offset(616)
+            except MemoryReadError:
+                # The item 'Litter' breaks this code above, why I have no clue why, but we get memory error, so we go to fall back?
+                hovered_item = await get_window_from_path(self.client.root_window, ['WorldView', 'shopGUI', 'buyWindow', 'column0', f"shoplist{i}"])
+                async with self.client.mouse_handler:
+                    await self.client.mouse_handler.set_mouse_position_to_window(hovered_item)
+                new_item_path = await get_window_from_path(self.client.root_window, ['WorldView', 'compareNewItem', 'ControlWidget', 'mainLayout'])
+                stats = await new_item_path.children()
+                for stat in stats:
+                    # Read each value in stats: Contains, Name, Link to image.jpg, and Stat, and we only want the
+                    stat_text_lower = (await stat.maybe_text()).lower()
+                    if "<center><color;ffffff00>" in stat_text_lower:
+                        _messy_item_name = stat_text_lower.split("<center><color;ffffff00>", 1)[1]
+                        logger.debug(f"Client {self.client.title} - {_messy_item_name} in backpack caused MemoryReadError, Try:Except handled it")
+                        break
             if messy_item_name == '':
                 pass
             else:
@@ -159,25 +176,6 @@ class ParsePack:
         # list_of_items_in_inventory = dict.fromkeys(list_of_items_in_inventory_dupes)
         # return list_of_items_in_inventory
         return list_of_items_in_inventory_dupes
-#
-# async def main():
-#     walker = ClientHandler()
-#     client = walker.get_new_clients()[0]
-#
-#     try:
-#         print('Preparing')
-#         await client.activate_hooks()
-#         async with ParsePack(client) as parse_pack:
-#             await flash_trash.open_and_select_backpack_all_tab()
-#
-#     finally:
-#         print("Closing Flash Trash")
-#         await walker.close()
-#
-#
-# if __name__ == "__main__":
-#     asyncio.run(main())
-#
 
 
         

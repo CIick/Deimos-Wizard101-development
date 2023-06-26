@@ -385,7 +385,7 @@ def create_gui(gui_theme, gui_text_color, gui_button_color, tool_name, tool_vers
 	inventory_features_layout2 = [
 		[gui.Text('Select items below to remove the items from the quick sell list', text_color=gui_text_color)],
 		[gui.Listbox(values=get_parsed_inventory(filepath='items_to_sell.txt'), select_mode=gui.LISTBOX_SELECT_MODE_MULTIPLE, size=(24, 4), key='remove_items_list')],
-		[hotkey_button(tl('Append Items To Sell'), GUIKeys.button_remove_items_to_sell, auto_size=True)],
+		[hotkey_button(tl('Remove Items To Sell'), GUIKeys.button_remove_items_to_sell, auto_size=True)],
 	]
 
 	framed_inventory_features_layout2 = gui.Frame(tl('Remove Items from items_to_sell.txt'), inventory_features_layout2, title_color=gui_text_color)
@@ -588,15 +588,40 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 				if user_input == '':
 					logger.debug('Error: User tried to enter NULL to "append" to items to sell')
 				else:
-					file_path = 'items_to_sell.txt'
-					if os.stat(file_path).st_size == 0:
-						with open(file_path, 'a') as file:
+					if os.stat('items_to_sell.txt').st_size == 0:
+						with open('items_to_sell.txt', 'a') as file:
 							file.write(user_input)
 							logger.debug('Successfully created items to sell')
+							file.close()
 					else:
-						with open(file_path, 'a') as file:
+						with open('items_to_sell.txt', 'a') as file:
 							file.write(',' + user_input)
 							logger.debug('Successfully appended items to sell list')
+							file.close()
+						file.close()
+
+						with open('items_to_sell.txt', 'r') as file:
+							string_of_items_to_sell_updated = file.read()
+							list_of_items_to_sell_updated = string_of_items_to_sell_updated.split(',')
+						file.close()
+
+						with open('parsed_inventory.txt', 'r') as file:
+							string_of_items_parsed = file.read()
+							list_of_items_parsed_updated = string_of_items_parsed.split(',')
+							for item in _user_input:
+								list_of_items_parsed_updated.remove(item)
+						file.close()
+
+						with open('parsed_inventory.txt', 'w') as file:
+							string_of_items_parsed_updated: str = ','.join(map(str, list_of_items_parsed_updated))
+							file.write(string_of_items_parsed_updated)
+
+						file.close()
+						window['remove_items_list'].update(values=list_of_items_to_sell_updated)
+						window['append_items_list'].update(values=list_of_items_parsed_updated)
+
+
+						# window['append_items_list'].update()
 
 			case GUIKeys.button_remove_items_to_sell:
 				# string_of_user_input = selected items from list box
@@ -616,8 +641,6 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 							list_of_items_to_sell.remove(item_to_remove_from_sell_list)
 
 					file_of_items_to_sell.close()
-					# Here is where I want it to update the listbox element for PySimpleGUI but nothing is updated
-					send_queue.put(GUICommand(GUICommandType.UpdateWindow, ('remove_items_list', list_of_items_to_sell)))
 					# Convert list to string
 					updated_string_of_items_to_sell: str = ','.join(map(str, list_of_items_to_sell))
 
@@ -626,6 +649,9 @@ def manage_gui(send_queue: queue.Queue, recv_queue: queue.Queue, gui_theme, gui_
 					new_list_with_items_removed.write(updated_string_of_items_to_sell)
 					new_list_with_items_removed.close()
 					logger.debug(f'Successfully removed items to sell: {string_of_user_input}')
+					# Here is where I want it to update the listbox element for PySimpleGUI but nothing is updated
+					new_list_with_items_removed.close()
+					window['remove_items_list'].update(values=list_of_items_to_sell)
 			case _:
 				pass
 

@@ -206,13 +206,14 @@ class FlashTrash:
                     await self.client.mouse_handler.click_window(confirm_quick_sell_crowns_item)
 
             please_wait = await get_window_from_path(self.client.root_window, ['WorldView', 'shopGUI', 'QuickSellWaitingWindow'])
-            while await please_wait.is_visible():
-                try:
-                    please_wait = await _maybe_get_named_window(self.client.root_window, 'QuickSellWaitingWindow')
-                except ValueError:
-                    break
-                except AttributeError:
-                    break
+            try:
+                while await please_wait.is_visible():
+                    try:
+                        please_wait = await _maybe_get_named_window(self.client.root_window, 'QuickSellWaitingWindow')
+                    except ValueError:
+                        break
+            except AttributeError:
+                logger.debug(f'Client {self.client.title} - Could not find "please_wait" window, likely too quick?')
         else:
             close_shop = await _maybe_get_named_window(self.client.root_window, 'exit')
             async with self.client.mouse_handler:
